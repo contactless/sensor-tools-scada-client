@@ -1,0 +1,11 @@
+sensor-tools-scada-client (1.1) stable; urgency=medium
+
+  * Add debug and syslog logging
+
+ -- Evgeny Boger <boger@contactless.ru>  Tue, 8 Jul 2015 02:19:02 +0300
+
+sensor-tools-scada-client (1.0) stable; urgency=medium
+
+  * Initial release. (Closes: #XXXXXX)
+
+ -- Evgeny Boger <boger@contactless.ru>  Tue, 30 Jun 2015 02:19:02 +0300
