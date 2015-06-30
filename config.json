@@ -1,0 +1,28 @@
+{
+    "server_host" : "178.132.203.6",
+    "server_port" : 7115,
+    "channels": {
+        "0" : ["w1-rs485", "Temp 1"],
+        "1" : ["w1-rs485", "Temp 2"],
+        "2" : ["w1-rs485", "Temp 3"],
+        "3" : ["w1-rs485", "Temp 4"],
+        "4" : ["w1-rs485", "Temp 5"],
+        "5" : ["w1-rs485", "Temp 6"],
+        "6" : ["w1-rs485", "Temp 7"],
+        "7" : ["w1-rs485", "Temp 8"],
+        "8" : ["w1-rs485", "Temp 9"],
+        "9" : ["w1-rs485", "Temp 10"],
+        "10" : ["w1-rs485", "Temp 11"],
+        "11" : ["w1-rs485", "Temp 12"],
+        "12" : ["w1-rs485", "Temp 13"],
+        "13" : ["w1-rs485", "Temp 14"],
+        "14" : ["w1-rs485", "Temp 15"],
+        "15" : ["w1-rs485", "Temp 16"]
+    },
+
+
+    "client_id" : 24,
+    "queue_size" : 100,
+    "tcp_timeout" : 10,
+    "saving_interval_prop" : 300
+}
