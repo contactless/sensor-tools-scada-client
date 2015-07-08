@@ -24,5 +24,6 @@
     "client_id" : 24,
     "queue_size" : 100,
     "tcp_timeout" : 10,
-    "saving_interval_prop" : 300
+    "saving_interval_prop" : 300,
+    "debug" : false
 }

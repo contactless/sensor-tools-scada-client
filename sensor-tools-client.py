@@ -9,13 +9,26 @@ import time
 import os
 import mosquitto
 import logging
+import logging.handlers
 import math
 
 from mqttrpc.client import TMQTTRPCClient
 from jsonrpc.exceptions import JSONRPCError
 
 
-logging.getLogger().setLevel(logging.WARNING)
+
+logger = logging.getLogger('')
+handler = logging.handlers.SysLogHandler(address = '/dev/log')
+formatter = logging.Formatter('sensor-tools-client: %(levelname)s:%(name)s:%(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+ch = logging.StreamHandler()
+ch_formatter = logging.Formatter('%(asctime)s - %(name)s:%(levelname)s:%(message)s')
+ch.setFormatter(ch_formatter)
+logger.addHandler(ch)
+
+logging.getLogger('').setLevel(logging.WARNING)
 
 class TServerConnection(object):
     MAX_RECONNECT_INTERVAL = 60
@@ -336,8 +349,16 @@ def main():
     parser.add_argument('config_file', type=str,
                      help='Config file location')
 
+    parser.add_argument('-d', '--debug', dest='debug', action='store_true',
+                     help='debug')
+
     args = parser.parse_args()
     config = json.load(open(args.config_file))
+
+
+    if args.debug or config.get('debug', None):
+        logging.getLogger().setLevel(logging.DEBUG)
+
 
     scada_client = TSensorToolsClient(config)
     scada_client.loop()
