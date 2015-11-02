@@ -1,5 +1,5 @@
 {
-    "server_host" : "178.132.203.6",
+    "server_host" : "127.0.0.1",
     "server_port" : 7115,
     "channels": {
         "0" : ["w1-rs485", "Temp 1"],
