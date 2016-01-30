@@ -1,23 +1,23 @@
 #!/bin/sh
 ### BEGIN INIT INFO
-# Provides:          sensor-tools-scada-client
+# Provides:          wb-scada-client
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Required-Start: $remote_fs mosquitto
 # Required-Stop:
-# Short-Description: sensor-tools SCADA client
-# Description:       sensor-tools SCADA client
+# Short-Description: Wiren Board active SCADA client
+# Description:       Wiren Board active SCADA client
 ### END INIT INFO
 
 # Do NOT "set -e"
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC="sensor-tools SCADA client"
-NAME=sensor-tools-client
+DESC="Wiren Board active SCADA client"
+NAME=wb-scada-client
 BIN_NAME=$NAME
 DAEMON="/usr/bin/python"
-DAEMON_ARGS="/usr/bin/$BIN_NAME /etc/sensor-tools-client.conf"
+DAEMON_ARGS="/usr/bin/$BIN_NAME /etc/wb-scada-client.conf"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 # Exit if the package is not installed

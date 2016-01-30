@@ -4,8 +4,8 @@ all:
 clean :
 
 install: all
-	install -m 0755 sensor-tools-client.py  $(DESTDIR)/usr/bin/sensor-tools-client
-	install -m 0644 config.json  $(DESTDIR)/etc/sensor-tools-client.conf
+	install -m 0755 wb-scada-client.py  $(DESTDIR)/usr/bin/wb-scada-client
+	install -m 0644 config.json  $(DESTDIR)/etc/wb-scada-client.conf
 
 
 
