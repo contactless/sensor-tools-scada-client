@@ -1,0 +1,6 @@
+debian/wb-scada-client
+debian/files
+debian/*.debhelper.log
+debian/*.substvars
+debian/*.debhelper
+*.pyc

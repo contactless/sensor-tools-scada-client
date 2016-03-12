@@ -1,0 +1,84 @@
+{
+  "type": "object",
+  "title": "SCADA Client",
+  "description": "WB SCADA client configuration",
+
+  "configFile": {
+    "path": "/etc/wb-scada-client.conf",
+    "service": "wb-scada-client"
+  },
+
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "title": "Client ID",
+      "minLength" : 1,
+      "propertyOrder": 1
+    },
+    "password": {
+      "type": "string",
+      "title": "Client Token",
+      "minLength" : 1,
+      "propertyOrder": 1
+    },
+
+    "server_url_base": {
+      "type": "string",
+      "title": "Server URL base",
+      "propertyOrder": 4
+    },
+    "queue_size" : {
+      "type" : "integer",
+      "minimum" : 1,
+      "maximum" : 1000000,
+      "title" : "Live queue size",
+      "description" : "In case of live queue overflow client will switch to archive mode",
+      "propertyOrder": 5
+    },
+    "tcp_timeout" : {
+      "type" : "number",
+      "minimum" : 0,
+      "title" : "TCP connection timeout",
+      "description" : "(seconds)",
+      "propertyOrder": 6
+    },
+    "channels" : {
+      "type": "array",
+      "title" : "MQTT Channels",
+      "items":  {
+        "type" : "object",
+        "title" : "Channel",
+        "properties" : {
+          "device" : {
+            "type" : "string",
+            "title" : "Device ID",
+            "minLength" : 1,
+            "propertyOrder" : 1,
+          },
+          "control" : {
+            "type" : "string",
+            "title" : "Control ID",
+            "minLength" : 1,
+            "propertyOrder" : 2,
+          }
+        },
+        "_format" : "grid"
+      },
+      "_format" : "table",
+      "options" : {
+        "disable_array_reorder" : true
+      },
+      "propertyOrder" : 3,
+     },
+     "debug" : {
+      "type" : "boolean",
+      "title" : "Enable debugging messages",
+      "propertyOrder" : 7,
+      "default" : false,
+      "_format": "checkbox"
+     }
+
+  },
+  "required": ["client_id", "password", "server_url_base", "channels"]
+}
+

@@ -1,9 +1,12 @@
 {
+    "connection_backend" : "sensor-tools",
+
+
     "server_host" : "127.0.0.1",
     "server_port" : 7115,
     "channels": {
-        "0" : ["w1-rs485", "Temp 1"],
         "1" : ["w1-rs485", "Temp 2"],
+        "0" : ["w1-rs485", "Temp 1"],
         "2" : ["w1-rs485", "Temp 3"],
         "3" : ["w1-rs485", "Temp 4"],
         "4" : ["w1-rs485", "Temp 5"],
