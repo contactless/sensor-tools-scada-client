@@ -6,6 +6,7 @@ import Queue
 import datetime
 import time
 import os
+import collections
 
 try:
     import mosquitto
@@ -42,6 +43,13 @@ ch.setFormatter(ch_formatter)
 logger.addHandler(ch)
 
 logging.getLogger('').setLevel(logging.WARNING)
+
+# class TWBMQTT(object):
+#     def __init__(self, mqtt_client):
+#         pass
+
+#     def 
+
 
 
 class TSCADAClient(object):
@@ -103,7 +111,8 @@ class TSCADAClient(object):
         self.scada_conn = backend.ServerConnection(
             self.config,
             mqtt_client=self.mqtt_client,
-            data_dir=self.data_dir
+            data_dir=self.data_dir,
+            parent = self,
         )
 
         if self.config.get('mqtt_username'):
@@ -120,14 +129,14 @@ class TSCADAClient(object):
             self.config.get('mqtt_host', 'localhost'), self.config.get('mqtt_port', 1883))
         self.mqtt_client.loop_start()
 
+        self.channels_meta = collections.defaultdict(dict)
+
     def on_mqtt_message(self, mosq, obj, msg):
+        print "topic: ", msg.topic
         if self.rpc_client.on_mqtt_message(mosq, obj, msg):
             return
 
-        if not self.live_mode:
-            return
-
-        if not mosquitto.topic_matches_sub('/devices/+/controls/+', msg.topic):
+        if not mosquitto.topic_matches_sub('/devices/+/controls/#', msg.topic):
             return
 
         parts = msg.topic.split('/')
@@ -135,26 +144,35 @@ class TSCADAClient(object):
         control_id = parts[4]
 
         channel = (device_id, control_id)
-        try:
-            self.live_queue.put_nowait((datetime.datetime.now(),
-                                        channel, msg.payload))
-        except Queue.Full:
-            logging.info("Setting live_mode to false")
-            self.live_mode = False
 
-            # do not call Queue methods inside 'with' block!
-            # Queue.join() won't work after clearing in this way
-            with self.live_queue.mutex:
-                self.live_queue.queue.clear()
+        if mosquitto.topic_matches_sub('/devices/+/controls/+/meta/+', msg.topic):
+            meta = parts[6]
+            self.channels_meta[channel][meta] = msg.payload
+            print "got meta", channel, meta, msg.topic
+
+        elif mosquitto.topic_matches_sub('/devices/+/controls/+', msg.topic):
+            if not self.live_mode:
+                return
+
+            try:
+                self.live_queue.put_nowait((datetime.datetime.now(),
+                                            channel, msg.payload))
+            except Queue.Full:
+                logging.info("Setting live_mode to false")
+                self.live_mode = False
+
+                # do not call Queue methods inside 'with' block!
+                # Queue.join() won't work after clearing in this way
+                with self.live_queue.mutex:
+                    self.live_queue.queue.clear()
 
     def on_mqtt_connect(self, mosq, obj, rc):
         for device_id, control_id in self.scada_conn.get_channels():
             topic = "/devices/%s/controls/%s" % (device_id, control_id)
+            self.mqtt_client.subscribe(topic + "/meta/+")
             self.mqtt_client.subscribe(topic)
 
     def process_data_item(self, channel, dt, value, live_mode):
-        req = self.scada_conn.prepare_request(dt, live=live_mode,
-                                              channels={channel: value})
 
         # пытаемся отправить строку на сервер. Если словили timeout, пытаемся ещё,
         #  пока находимся в live mode
@@ -168,7 +186,8 @@ class TSCADAClient(object):
                     return False
 
             try:
-                resp = self.scada_conn.do_request(req)
+                resp = self.scada_conn.do_request(dt, live=live_mode,
+                                                      channels={channel: value})
             except TRequestException:
                 logging.warning("error while performing request, reconnecting")
                 self.scada_conn.reconnect()

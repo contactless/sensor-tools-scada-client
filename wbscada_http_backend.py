@@ -42,6 +42,7 @@ class TCmdFeedHandler(object):
         resp = self.cmd_feed_sess.get(self.server_connection.url_base + "cmd_feed/%s" % self.server_connection.hw_id,
                                       params={'last_ts': self.last_ts}, timeout=self.LONG_POLL_TIMEOUT)
         resp.raise_for_status()
+        logging.debug("got response from cmd feed: %s" % resp.text)
         return resp.text
 
     def process_cmd_feed_response(self, resp):
@@ -66,10 +67,10 @@ class TCmdFeedHandler(object):
         while True:
             try:
                 resp = self.make_single_request()
-            except (requests.exceptions.ReadTimeout,):
+            except (requests.exceptions.Timeout,):
                 logging.info("timeout on long poll channel, ignoring")
                 continue
-            except (requests.exceptions.ConnectionError,):
+            except (requests.exceptions.RequestException, ):
                 logging.exception("Error requesting cmd feed from server")
                 time.sleep(10)
                 continue
@@ -98,6 +99,9 @@ class TWBSCADAServerConnection(object):
         self.config = config
         self.mqtt_client = kwargs['mqtt_client']
         self.data_dir = kwargs['data_dir']
+
+        #FIXME:
+        self.parent = kwargs['parent']
 
         utils.ensure_config_var(self.config, 'server_url_base')
         utils.ensure_config_var(self.config, 'channels')
@@ -129,6 +133,8 @@ class TWBSCADAServerConnection(object):
         self.hw_id = utils.get_stored_serial()#.replace(':', '')
         self.req_counter = 0
 
+        self.meta_sent = set()
+
         self.cmd_feed_handler = TCmdFeedHandler(self)
         self.cmd_feed_handler.start()
 
@@ -144,7 +150,7 @@ class TWBSCADAServerConnection(object):
             try:
                 self.connect()
             except (requests.exceptions.ConnectionError,
-                    requests.exceptions.ReadTimeout,
+                    requests.exceptions.Timeout,
                     requests.exceptions.HTTPError):
 
                 logging.exception("connect failed")
@@ -155,6 +161,8 @@ class TWBSCADAServerConnection(object):
                 return
 
     def connect(self):
+        self.meta_sent.clear()
+
         body = json.dumps({
             'client_version': '0.1',
             'wb_version': utils.get_wb_version(),
@@ -169,12 +177,24 @@ class TWBSCADAServerConnection(object):
         print "text:", resp.text
         resp.raise_for_status()
 
+
+    def post_channels_meta(self, channels):
         # FIXME: fix stub here
+    
         meta_payload = {"channels": {}}
-        for device_id, control_id in self.channels:
-            meta_payload["channels"]["%s/%s" % (device_id, control_id)] = {
-                "type": "temperature"
-            }
+
+        for channel in channels:
+            if channel not in self.meta_sent:
+                meta_type = self.parent.channels_meta[channel].get('type')
+                if meta_type is None:
+                    logging.warning("Meta type unknown for channel %s/%s" % channel)
+                else:
+                    meta_payload["channels"]["%s/%s" % channel] = {
+                            "type": meta_type
+                        }
+
+        if not meta_payload["channels"]:
+            return
 
         print "meta_payload: ", json.dumps(meta_payload)
         resp = self.req_sess.post(self.url_base + "post_channel_meta/%s" % self.hw_id,
@@ -183,6 +203,9 @@ class TWBSCADAServerConnection(object):
         print "meta conn resp: ", resp
         print "text:", resp.text
         resp.raise_for_status()
+
+        for channel in channels:
+            self.meta_sent.add(channel)
 
     def prepare_request(self, timestamp, live, channels):
         self.req_counter += 1
@@ -200,28 +223,32 @@ class TWBSCADAServerConnection(object):
             else:
                 if not math.isnan(_v) and not math.isinf(_v):
                     if k in self.channels:
-                        device, control = k
-                        channel_id = "%s/%s" % (device, control)
-                        payload['data'].setdefault(channel_id, [])
-                        payload['data'][channel_id].append(
-                            {
-                                "v": v,
-                                "t": time.mktime(timestamp.timetuple()) +
-                                timestamp.microsecond / 1E6,
-                            }
-                        )
+                        if k not in self.meta_sent:
+                            logging.warning("Meta type not sent for channel %s/%s, ingoring" % k)
+                        else:
+                            device, control = k
+                            channel_id = "%s/%s" % (device, control)
+                            payload['data'].setdefault(channel_id, [])
+                            payload['data'][channel_id].append(
+                                {
+                                    "v": v,
+                                    "t": time.mktime(timestamp.timetuple()) +
+                                    timestamp.microsecond / 1E6,
+                                }
+                            )
 
         return json.dumps(payload)
 
-    def do_request(self, req):
+    def do_request(self, timestamp, live, channels):
         """ sends request and returns response (without trailing newline).
             if socket is closed, returns None
             throws socket.timeout on timeout """
 
+        self.post_channels_meta(self.channels)
+        req = self.prepare_request(timestamp, live, channels)
         logging.debug("Sending request: '%s'" % req)
 
         try:
-
             resp = self.req_sess.post(self.url_base + "post_data/%s" % self.hw_id,
                                       req,
                                       timeout=self.timeout)
