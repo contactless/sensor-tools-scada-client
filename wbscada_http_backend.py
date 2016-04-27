@@ -41,6 +41,10 @@ class TCmdFeedHandler(object):
     def make_single_request(self):
         resp = self.cmd_feed_sess.get(self.server_connection.url_base + "cmd_feed/%s" % self.server_connection.hw_id,
                                       params={'last_ts': self.last_ts}, timeout=self.LONG_POLL_TIMEOUT)
+
+        if resp.status_code in (requests.codes.unauthorized, requests.codes.forbidden):
+            raise RuntimeError("Auth credentials not accepted by server")
+
         resp.raise_for_status()
         logging.debug("got response from cmd feed: %s" % resp.text)
         return resp.text
@@ -60,7 +64,7 @@ class TCmdFeedHandler(object):
                                                            payload=value.encode('utf8'),
                                                            qos=2,
                                                            retain=False)
-                print "%s==>%s" % (channel, value)
+                logging.debug("publish to mqtt : %s==>%s" % (channel, value))
 
     def thread_func(self):
 
@@ -170,11 +174,12 @@ class TWBSCADAServerConnection(object):
             'wlan_ip': utils.get_iface_ip('wlan0'),
             'gprs_ip': utils.get_iface_ip('ppp0')
         })
-        print body
         resp = self.req_sess.post(
             self.url_base + "post_client_info/%s" % self.hw_id, body, timeout=self.timeout)
-        print "conn resp: ", resp
-        print "text:", resp.text
+
+        if resp.status_code in (requests.codes.unauthorized, requests.codes.forbidden):
+            raise RuntimeError("Auth credentials not accepted by server")
+
         resp.raise_for_status()
 
 
@@ -196,7 +201,7 @@ class TWBSCADAServerConnection(object):
         if not meta_payload["channels"]:
             return
 
-        print "meta_payload: ", json.dumps(meta_payload)
+        logging.debug("meta_payload: " + json.dumps(meta_payload))
         resp = self.req_sess.post(self.url_base + "post_channel_meta/%s" % self.hw_id,
                                   json.dumps(meta_payload), timeout=self.timeout)
 
