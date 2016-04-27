@@ -249,18 +249,25 @@ class TWBSCADAServerConnection(object):
         logging.debug("Sending request: '%s'" % req)
 
         try:
-            resp = self.req_sess.post(self.url_base + "post_data/%s" % self.hw_id,
-                                      req,
-                                      timeout=self.timeout)
-        except requests.exceptions.ConnectionError:
-            raise
+
+            try:
+                resp = self.req_sess.post(self.url_base + "post_data/%s" % self.hw_id,
+                                          req,
+                                          timeout=self.timeout)
+            except requests.exceptions.RequestException:
+                raise
+
+            else:
+                if resp.status_code != requests.codes.no_content:
+                    if resp.text:
+                        logging.debug("post_data response body: %s" % resp.text)
+
+                resp.raise_for_status()
+                return True
+
+        except requests.exceptions.RequestException:
+            logging.exception("error sending post_data request to server")
             raise TRequestException()
-        else:
-            print "conn resp: ", resp
-            if resp.status_code != requests.codes.no_content:
-                    print "text:", resp.text
-            resp.raise_for_status()
-            return True
 
 
 ServerConnection = TWBSCADAServerConnection
