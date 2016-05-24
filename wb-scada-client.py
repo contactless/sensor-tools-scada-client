@@ -8,11 +8,7 @@ import time
 import os
 import collections
 
-try:
-    import mosquitto
-except ImportError:
-    import paho.mqtt.client as mosquitto
-
+from mqttclient import TMQTTClient, mosquitto
 
 import logging
 import logging.handlers
@@ -43,12 +39,6 @@ ch.setFormatter(ch_formatter)
 logger.addHandler(ch)
 
 logging.getLogger('').setLevel(logging.WARNING)
-
-# class TWBMQTT(object):
-#     def __init__(self, mqtt_client):
-#         pass
-
-#     def 
 
 
 
@@ -85,7 +75,7 @@ class TSCADAClient(object):
                                                         self.last_success_uid))
 
     def __init__(self, config):
-        self.mqtt_client = mosquitto.Mosquitto()
+        self.mqtt_client = TMQTTClient()
 
         self.config = config
 
@@ -132,7 +122,7 @@ class TSCADAClient(object):
         self.channels_meta = collections.defaultdict(dict)
 
     def on_mqtt_message(self, mosq, obj, msg):
-        print "topic: ", msg.topic
+        logging.debug("got mqtt message on topic %s" % msg.topic)
         if self.rpc_client.on_mqtt_message(mosq, obj, msg):
             return
 
@@ -140,15 +130,15 @@ class TSCADAClient(object):
             return
 
         parts = msg.topic.split('/')
-        device_id = parts[2]
-        control_id = parts[4]
+        device_id = parts[2].decode('utf8')
+        control_id = parts[4].decode('utf8')
 
         channel = (device_id, control_id)
 
         if mosquitto.topic_matches_sub('/devices/+/controls/+/meta/+', msg.topic):
             meta = parts[6]
             self.channels_meta[channel][meta] = msg.payload
-            print "got meta", channel, meta, msg.topic
+            logging.debug("got meta %s %s %s " % (channel, meta, msg.topic))
 
         elif mosquitto.topic_matches_sub('/devices/+/controls/+', msg.topic):
             if not self.live_mode:
@@ -168,7 +158,8 @@ class TSCADAClient(object):
 
     def on_mqtt_connect(self, mosq, obj, rc):
         for device_id, control_id in self.scada_conn.get_channels():
-            topic = "/devices/%s/controls/%s" % (device_id, control_id)
+            topic = u"/devices/%s/controls/%s" % (device_id, control_id)
+            topic = topic.encode('utf8')
             self.mqtt_client.subscribe(topic + "/meta/+")
             self.mqtt_client.subscribe(topic)
 

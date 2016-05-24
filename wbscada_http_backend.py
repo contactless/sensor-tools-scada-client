@@ -125,7 +125,7 @@ class TWBSCADAServerConnection(object):
         for item in self.config['channels']:
             device_id, control_id = item["device"], item["control"]
             self.channels.add(
-                (device_id.encode('utf8'), control_id.encode('utf8')))
+                (device_id, control_id))
 
         self.sock = None
         self.fd = None
@@ -205,8 +205,6 @@ class TWBSCADAServerConnection(object):
         resp = self.req_sess.post(self.url_base + "post_channel_meta/%s" % self.hw_id,
                                   json.dumps(meta_payload), timeout=self.timeout)
 
-        print "meta conn resp: ", resp
-        print "text:", resp.text
         resp.raise_for_status()
 
         for channel in channels:

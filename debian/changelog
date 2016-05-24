@@ -1,3 +1,21 @@
+wb-scada-client (2.0.5) stable; urgency=medium
+
+  * properly handle Cyrillic topics
+
+ -- Evgeny Boger <boger@contactless.ru>  Tue, 24 May 2016 12:59:02 +0300
+
+wb-scada-client (2.0.4) stable; urgency=medium
+
+  * fail early on invalid auth credentials
+
+ -- Evgeny Boger <boger@contactless.ru>  Wed, 27 Apr 2016 11:45:43 +0300
+
+wb-scada-client (2.0.3) stable; urgency=medium
+
+  * handle errors in post_data channel (fix regression)
+
+ -- Evgeny Boger <boger@contactless.ru>  Sun, 24 Apr 2016 14:28:44 +0300
+
 wb-scada-client (2.0.2) stable; urgency=medium
 
   * properly handle server errors on cmd feed
