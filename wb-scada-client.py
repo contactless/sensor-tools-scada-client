@@ -213,9 +213,9 @@ class TSCADAClient(object):
                                     }, self.rpc_timeout)
 
         for row in resp.get(u'values', ()):
-            channel = (str(row[u'device']), str(row[u'control']))
+            channel = (row[u'device'], row[u'control'])
 
-            value = str(row[u'value'])
+            value = row[u'value']
             dt = datetime.datetime.fromtimestamp(row[u'timestamp'])
 
             if self.process_data_item(channel, dt, value, live_mode=False):
