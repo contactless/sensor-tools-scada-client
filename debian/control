@@ -7,5 +7,5 @@ Build-Depends: debhelper (>= 9), pkg-config
 
 Package: wb-scada-client
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, mosquitto, python-mosquitto, wb-mqtt-db, python-mqttrpc, python-requests
+Depends: ${shlibs:Depends}, ${misc:Depends}, mosquitto, python-mosquitto, wb-mqtt-db, python-mqttrpc, python-requests, python-bsddb3
 Description: sensor-tools SCADA client
