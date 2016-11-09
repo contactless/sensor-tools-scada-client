@@ -9,9 +9,8 @@ import json
 import logging
 import threading
 import requests
-
-
-import httplib
+from collections import namedtuple
+# import httplib
 
 # httplib.HTTPConnection.debuglevel = 1
 
@@ -21,8 +20,62 @@ logging.basicConfig()
 # requests_log.setLevel(logging.DEBUG)
 # requests_log.propagate = True
 
+class TWBScadaError(Exception):
+    code = None
+    status = None
+    description = None
+    message = None
 
-class TCmdFeedHandler(object):
+    def __init__(self, message, code=None, status=None):
+        if code:
+            self.code = code
+            message += " (%d)" % code
+        if status:
+            self.status = status
+            message += " [HTTP %d]" % status
+
+        super(TWBScadaError, self).__init__(message)
+
+class ServerError(TWBScadaError):
+    code = 0
+class InvalidAccessCredentials(TWBScadaError):
+    code = 1
+class ClasimedByAnotherUser(TWBScadaError):
+    code = 2
+
+class UnknownError(TWBScadaError):
+    pass
+
+class TWBScadaProtocolBase(object):
+    # lookup dict by error code
+    error_codes = {
+        x.code : x for x in (ServerError, InvalidAccessCredentials, ClasimedByAnotherUser)
+    }
+
+    def parse_error(self, resp):
+        if resp.ok:
+            return None
+        if resp.text:
+            logging.debug("got error body: %s" % resp.text)
+            try:
+                body = json.loads(resp.text)
+            except ValueError:
+                return UnknownError(resp.text, status=resp.status_code)
+            else:
+                error_obj = body.get(u'error', {})
+                code = error_obj.get(u'code', None)
+                msg = error_obj.get(u'msg', '')
+                if code in self.error_codes:
+                    return self.error_codes[code](msg)
+                else:
+                    return UnknownError(msg, code=code, status=resp.status_code)
+        else:
+            return UnknownError("empty body", status=resp.status_code)
+
+
+
+
+class TCmdFeedHandler(TWBScadaProtocolBase):
     LONG_POLL_TIMEOUT = 120
 
     def __init__(self, server_connection):
@@ -42,8 +95,9 @@ class TCmdFeedHandler(object):
         resp = self.cmd_feed_sess.get(self.server_connection.url_base + "cmd_feed/%s" % self.server_connection.hw_id,
                                       params={'last_ts': self.last_ts}, timeout=self.LONG_POLL_TIMEOUT)
 
-        if resp.status_code in (requests.codes.unauthorized, requests.codes.forbidden):
-            raise RuntimeError("Auth credentials not accepted by server")
+        error = self.parse_error(resp)
+        if error:
+            raise error
 
         resp.raise_for_status()
         logging.debug("got response from cmd feed: %s" % resp.text)
@@ -92,7 +146,7 @@ class TCmdFeedHandler(object):
         self.thread.start()
 
 
-class TWBSCADAServerConnection(object):
+class TWBSCADAServerConnection(TWBScadaProtocolBase):
     MAX_RECONNECT_INTERVAL = 60
     MIN_RECONNECT_INTERVAL = 0.1
     POLLING_INTERVAL = 60
@@ -177,8 +231,9 @@ class TWBSCADAServerConnection(object):
         resp = self.req_sess.post(
             self.url_base + "post_client_info/%s" % self.hw_id, body, timeout=self.timeout)
 
-        if resp.status_code in (requests.codes.unauthorized, requests.codes.forbidden):
-            raise RuntimeError("Auth credentials not accepted by server")
+        error = self.parse_error(resp)
+        if error:
+            raise error
 
         resp.raise_for_status()
 
